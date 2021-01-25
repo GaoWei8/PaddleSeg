@@ -23,6 +23,16 @@ import paddle.nn.functional as F
 from paddleseg.utils import TimeAverager, calculate_eta, resume, logger
 from paddleseg.core.val import evaluate
 
+import ctypes
+_cudart = ctypes.CDLL('libcudart.so')
+def cu_prof_start():
+    ret = _cudart.cudaProfilerStart()
+    if ret != 0:
+        raise Exception('cudaProfilerStart() returned %d' % ret)
+def cu_prof_stop():
+    ret = _cudart.cudaProfilerStop()
+    if ret != 0:
+        raise Exception('cudaProfilerStop() returned %d' % ret)
 
 def check_logits_losses(logits_list, losses):
     len_logits = len(logits_list)
@@ -128,6 +138,16 @@ def train(model,
             iter += 1
             if iter > iters:
                 break
+            #if iter == 100:
+            #    paddle.fluid.profiler.start_profiler("GPU", "Default")
+            #if iter == 110:
+            #    paddle.fluid.profiler.stop_profiler("total", "deeplabv3.profile")
+            #    return
+            if iter == 100:
+                cu_prof_start()
+            if iter == 110:
+                cu_prof_stop()
+                return
             reader_cost_averager.record(time.time() - batch_start)
             images = data[0]
             labels = data[1].astype('int64')
